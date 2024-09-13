@@ -1,1 +1,19 @@
 services:
+  # Database
+  user-db:
+    image: postgres:17rc1-alpine3.19
+    container_name: user-db
+    networks:
+      - trademarkia
+    ports:
+      - "${USER_DB_PORT}:5432"
+    environment:
+      - POSTGRES_USER=${USER_POSTGRES_USER}
+      - POSTGRES_PASSWORD=${USER_POSTGRES_PASSWORD}
+      - POSTGRES_DB=${USER_POSTGRES_DB}
+    volumes:
+      - ../../.data:/var/lib/postgresql/data
+
+networks:
+  trademarkia:
+    driver: bridge
