@@ -1,3 +1,4 @@
+name: trademarkia
 services:
   # Database
   user-db:
@@ -13,6 +14,55 @@ services:
       - POSTGRES_DB=${USER_POSTGRES_DB}
     volumes:
       - ../../.data:/var/lib/postgresql/data
+
+  # Metrics, Logging and Tracing
+  loki:
+    image: grafana/loki
+    container_name: trademarkia-loki
+    networks:
+      - trademarkia
+    ports:
+      - "${GRAFANA_LOKI_PORT}:3100"
+
+  grafana:
+    image: grafana/grafana-oss
+    container_name: trademarkia-grafana
+    networks:
+      - trademarkia
+    ports:
+      - "${GRAFANA_PORT}:3000"
+    depends_on:
+      - loki
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+      - GF_SECURITY_ADMIN_USER=samarth
+      - GF_SECURITY_ADMIN_PASSWORD=password
+    volumes:
+      - ../../config/grafana:/etc/grafana/provisioning
+      - ../../config/grafana/dashboards:/var/lib/grafana/dashboards
+
+  prometheus:
+    image: prom/prometheus
+    container_name: trademarkia-prometheus
+    networks:
+      - trademarkia
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yaml"
+    ports:
+      - ${PROMETHEUS_PORT}:9090
+    restart: unless-stopped
+    volumes:
+      - ../../config/prometheus:/etc/prometheus
+
+  zipkin:
+    image: openzipkin/zipkin
+    container_name: trademarkia-zipkin
+    networks:
+      - trademarkia
+    ports:
+      - "${ZIPKIN_PORT}:9411"
+
 
 networks:
   trademarkia:

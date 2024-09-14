@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/samarthasthan/21BRS1248_Backend/common/pkg/env"
+	"github.com/samarthasthan/21BRS1248_Backend/common/env"
 )
 
 var (

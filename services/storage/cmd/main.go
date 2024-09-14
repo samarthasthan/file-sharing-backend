@@ -1,13 +1,13 @@
 package main
 
 import (
-	"github.com/samarthasthan/21BRS1248_Backend/common/pkg/env"
+	"github.com/samarthasthan/21BRS1248_Backend/common/env"
 )
 
 var (
 	STORAGE_GRPC_PORT         string
 	STORAGE_DB_PORT           string
-	STORAGE_POSTGRES_STORAGE     string
+	STORAGE_POSTGRES_STORAGE  string
 	STORAGE_POSTGRES_PASSWORD string
 	STORAGE_POSTGRES_DB       string
 	STORAGE_POSTGRES_HOST     string

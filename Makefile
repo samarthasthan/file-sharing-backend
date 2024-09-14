@@ -25,3 +25,16 @@ sqlc-gen:
 	@echo "Generating SQLC..."
 	@sqlc generate -f ./services/user/internal/database/sqlc/sqlc.yaml
 	@echo "SQLC generation completed."
+
+
+# Generate Go code from Protocol Buffers
+grpc-gen:
+	@echo "Generating Go code from Protocol Buffers..."
+	@protoc --go_out=paths=source_relative:./common/proto_go --go-grpc_out=paths=source_relative:./common/proto_go --proto_path=./common/proto ./common/proto/*.proto
+	@echo "Go code generation completed."
+
+# Clean generated Go code
+grpc-clean:
+	@echo "Cleaning generated Go code..."
+	@rm -f ./common/proto_go/*.go
+	@echo "Clean completed."

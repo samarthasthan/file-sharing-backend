@@ -7,7 +7,7 @@ import (
 	_ "github.com/lib/pq"
 	zipkinsql "github.com/openzipkin-contrib/zipkin-go-sql"
 	"github.com/openzipkin/zipkin-go"
-	"github.com/samarthasthan/21BRS1248_Backend/services/user/internal/database/sqlc"
+	"github.com/samarthasthan/21BRS1248_Backend/services/storage/internal/database/sqlc"
 )
 
 type Database interface {
