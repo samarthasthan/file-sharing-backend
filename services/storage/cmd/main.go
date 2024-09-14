@@ -1,11 +1,17 @@
 package main
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
+	"os"
+	"time"
 
 	"github.com/samarthasthan/21BRS1248_Backend/common/env"
 	grpc_common "github.com/samarthasthan/21BRS1248_Backend/common/grpc"
+	"github.com/samarthasthan/21BRS1248_Backend/common/kafka"
 	"github.com/samarthasthan/21BRS1248_Backend/common/logger"
+	"github.com/samarthasthan/21BRS1248_Backend/common/models"
 	"github.com/samarthasthan/21BRS1248_Backend/common/proto_go"
 	zipkinc "github.com/samarthasthan/21BRS1248_Backend/common/zipkin"
 	"github.com/samarthasthan/21BRS1248_Backend/services/storage/internal/database"
@@ -21,6 +27,9 @@ var (
 	STORAGE_POSTGRES_PASSWORD string
 	STORAGE_POSTGRES_DB       string
 	STORAGE_POSTGRES_HOST     string
+	TEMP_PATH                 string
+	KAFKA_PORT                string
+	KAFKA_HOST                string
 )
 
 func init() {
@@ -30,6 +39,9 @@ func init() {
 	STORAGE_POSTGRES_PASSWORD = env.GetEnv("STORAGE_POSTGRES_PASSWORD", "password")
 	STORAGE_POSTGRES_DB = env.GetEnv("STORAGE_POSTGRES_DB", "user-db")
 	STORAGE_POSTGRES_HOST = env.GetEnv("STORAGE_POSTGRES_HOST", "localhost")
+	TEMP_PATH = env.GetEnv("TEMP_PATH", "/tmp/uploads")
+	KAFKA_PORT = env.GetEnv("KAFKA_PORT", "9092")
+	KAFKA_HOST = env.GetEnv("KAFKA_HOST", "localhost")
 }
 
 func main() {
@@ -42,6 +54,13 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to create Zipkin tracer: %v", err)
 	}
+
+	// Initialising Kafka Producer
+	p := kafka.NewKafkaProducer(KAFKA_HOST, KAFKA_PORT)
+
+	// Initialising Kafka Consumer
+	c := kafka.NewKafkaConsumer(KAFKA_HOST, KAFKA_PORT)
+	c.Subscribe([]string{"file-process-out"})
 
 	// Connect to postgres
 	db := database.NewPostgres()
@@ -58,7 +77,7 @@ func main() {
 	// Register repository
 	repo := repository.NewRepository(db.Queries)
 
-	service := grpcin.NewStorageService(log, repo)
+	service := grpcin.NewStorageService(log, repo, p, c)
 
 	grpcServer := grpc_common.NewGrpcServer(log, tracer)
 
@@ -66,5 +85,32 @@ func main() {
 		proto_go.RegisterFileServiceServer(s, service)
 	})
 
-	grpcServer.Run(STORAGE_GRPC_PORT)
+	go func() {
+		grpcServer.Run(STORAGE_GRPC_PORT)
+	}()
+
+	for {
+		msg, err := c.ReadMessage(1 * time.Second)
+		if err != nil {
+			continue
+		} else {
+			// Message to models.FileProcess
+			fileProcess := &models.FileProcess{}
+			if err := json.Unmarshal(msg.Value, fileProcess); err != nil {
+				log.Fatalf("Failed to unmarshal message: %v", err)
+			}
+			// Delete file from local storage
+			err = os.Remove(fmt.Sprintf("../../../.data%s", fileProcess.Path))
+			if err != nil {
+				log.Fatalf("Failed to delete file: %v", err)
+			}
+
+			// Update file status in database
+			err = repo.MarkFileAsProcessed(context.Background(), fileProcess.ID)
+			if err != nil {
+				log.Fatalf("Failed to update file status: %v", err)
+			}
+			log.Infof("Received message: %s", string(msg.Value))
+		}
+	}
 }

@@ -107,7 +107,7 @@ func (f *FiberHandler) handleUserRoutes() {
 // Handle file routes
 func (f *FiberHandler) handleFileRoutes() {
 
-	f.app.Get("/metadata/:file_id", f.handleGetFile)
+	f.app.Get("/share/:file_id", f.handleGetFile)
 
 	// Add auth middleware
 	f.app.Use(authMiddleware(f.userClient))

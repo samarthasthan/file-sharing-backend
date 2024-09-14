@@ -1,11 +1,30 @@
-name: trademarkia
+name: storage_project
 services:
+  # Kafka
+  kafka:
+    build:
+      context: ../dockerfile/kafka
+      dockerfile: ./Dockerfile
+    container_name: kafka
+    ports:
+      - ${KAFKA_EXTERNAL_PORT}:9092
+    networks:
+      - storage_project
+    healthcheck:
+      test:
+        ["CMD-SHELL", "./wait-for.sh kafka:${KAFKA_PORT} -- ./kafka_setup.sh"]
+      interval: 10s
+      timeout: 10s
+      retries: 100
+      start_period: 10s
+
+
   # Database
   user-db:
     image: postgres:17rc1-alpine3.19
     container_name: user-db
     networks:
-      - trademarkia
+      - storage_project
     ports:
       - "${USER_DB_PORT}:5432"
     environment:
@@ -20,14 +39,12 @@ services:
     image: bitnami/minio:latest
     container_name: trademarkia-minio
     networks:
-      - trademarkia
+      - storage_project
     ports:
       - "${MINIO_PORT}:9000"
       - "${MINIO_WEB_PORT}:9001"
     environment:
       - MINIO_FORCE_NEW_KEYS=yes
-      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
-      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
       - MINIO_HOST=${MINIO_HOST}
       - MINIO_ROOT_USER=${MINIO_ROOT_USER}
       - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
@@ -40,7 +57,7 @@ services:
     image: grafana/loki
     container_name: trademarkia-loki
     networks:
-      - trademarkia
+      - storage_project
     ports:
       - "${GRAFANA_LOKI_PORT}:3100"
 
@@ -48,7 +65,7 @@ services:
     image: grafana/grafana-oss
     container_name: trademarkia-grafana
     networks:
-      - trademarkia
+      - storage_project
     ports:
       - "${GRAFANA_PORT}:3000"
     depends_on:
@@ -66,7 +83,7 @@ services:
     image: prom/prometheus
     container_name: trademarkia-prometheus
     networks:
-      - trademarkia
+      - storage_project
     command:
       - "--config.file=/etc/prometheus/prometheus.yaml"
     ports:
@@ -79,11 +96,11 @@ services:
     image: openzipkin/zipkin
     container_name: trademarkia-zipkin
     networks:
-      - trademarkia
+      - storage_project
     ports:
       - "${ZIPKIN_PORT}:9411"
 
 
 networks:
-  trademarkia:
+  storage_project:
     driver: bridge

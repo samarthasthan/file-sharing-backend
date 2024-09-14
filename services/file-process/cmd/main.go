@@ -1,18 +1,18 @@
 package main
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
+	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/samarthasthan/21BRS1248_Backend/common/env"
+	"github.com/samarthasthan/21BRS1248_Backend/common/kafka"
+	"github.com/samarthasthan/21BRS1248_Backend/common/logger"
+	"github.com/samarthasthan/21BRS1248_Backend/common/models"
+	"github.com/samarthasthan/21BRS1248_Backend/services/file-process/internal/s3"
 )
 
 var (
@@ -21,6 +21,8 @@ var (
 	MINIO_ROOT_PASSWORD   string
 	MINIO_HOST            string
 	MINIO_DEFAULT_BUCKETS string
+	KAFKA_PORT            string
+	KAFKA_HOST            string
 )
 
 func init() {
@@ -29,90 +31,77 @@ func init() {
 	MINIO_ROOT_PASSWORD = env.GetEnv("MINIO_ROOT_PASSWORD", "password")
 	MINIO_HOST = env.GetEnv("MINIO_HOST", "localhost")
 	MINIO_DEFAULT_BUCKETS = env.GetEnv("MINIO_DEFAULT_BUCKETS", "uploads")
+	KAFKA_PORT = env.GetEnv("KAFKA_PORT", "9092")
+	KAFKA_HOST = env.GetEnv("KAFKA_HOST", "localhost")
 }
 
 func main() {
-	// Configure to use MinIO Server
-	s3Config := &aws.Config{
-		Credentials:      credentials.NewStaticCredentials(MINIO_ROOT_USER, MINIO_ROOT_PASSWORD, ""),
-		Endpoint:         aws.String(fmt.Sprintf("http://%s:%s", MINIO_HOST, MINIO_PORT)),
-		Region:           aws.String("us-east-1"),
-		DisableSSL:       aws.Bool(true),
-		S3ForcePathStyle: aws.Bool(true),
-	}
 
-	// Create a new session
-	newSession, err := session.NewSession(s3Config)
+	// Initialize logger
+	log := logger.NewLogger("file-process")
+
+	// Kakfa producer
+	p := kafka.NewKafkaProducer(KAFKA_HOST, KAFKA_PORT)
+
+	// Kafka consumer
+	c := kafka.NewKafkaConsumer(KAFKA_HOST, KAFKA_PORT)
+	c.Subscribe([]string{"file-process-in"})
+
+	// Initialize S3 client
+	s3Client, err := s3.NewS3(
+		MINIO_ROOT_USER,
+		MINIO_ROOT_PASSWORD,
+		fmt.Sprintf("http://%s:%s", MINIO_HOST, MINIO_PORT),
+		"us-east-1",
+		MINIO_DEFAULT_BUCKETS,
+	)
 	if err != nil {
-		log.Fatalf("Failed to create session: %v", err)
+		log.Fatalf("Failed to create S3 client: %v", err)
 	}
-
-	// Create S3 client
-	s3Client := s3.New(newSession)
 
 	// Create bucket if it doesn't exist
-	_, err = s3Client.CreateBucket(&s3.CreateBucketInput{
-		Bucket: aws.String(MINIO_DEFAULT_BUCKETS),
-	})
-	if err != nil {
-		if !isErrorBucketAlreadyExists(err) {
-			log.Printf("Failed to create bucket: %v", err)
-		}
-	} else {
-		log.Printf("Successfully created bucket: %s", MINIO_DEFAULT_BUCKETS)
+	if err := s3Client.CreateBucket(); err != nil {
+		log.Fatalf("Error creating bucket: %v", err)
 	}
 
-	// Create an uploader with the session and default options
-	uploader := s3manager.NewUploader(newSession)
-
-	// Upload files from .data/uploads/ directory
-	uploadDir := "../../../.data/uploads/"
-	err = filepath.Walk(uploadDir, func(path string, info os.FileInfo, err error) error {
+	for {
+		msg, err := c.ReadMessage(1 * time.Second)
 		if err != nil {
-			return err
-		}
-		if !info.IsDir() {
-			file, err := os.Open(path)
-			if err != nil {
-				return fmt.Errorf("failed to open file %s: %v", path, err)
+			continue
+		} else {
+			log.Infof("Received message: %s", string(msg.Value))
+			// Convert message to FileProcess struct
+			var fileProcess *models.FileProcess
+			if err := json.Unmarshal(msg.Value, &fileProcess); err != nil {
+				log.Fatalf("Failed to unmarshal message: %v", err)
 			}
-			defer file.Close()
 
-			key := filepath.Base(path)
-			_, err = uploader.Upload(&s3manager.UploadInput{
-				Bucket: aws.String(MINIO_DEFAULT_BUCKETS),
-				Key:    aws.String(key),
-				Body:   file,
-				ACL:    aws.String("public-read"),
+			// Upload files from .data/uploads/ directory
+			uploadDir := fmt.Sprintf("../../../.data%s", fileProcess.Path)
+			err = filepath.Walk(uploadDir, func(path string, info os.FileInfo, err error) error {
+				if err != nil {
+					return err
+				}
+				if !info.IsDir() {
+					publicURL, err := s3Client.UploadFile(path)
+					if err != nil {
+						return fmt.Errorf("failed to upload file %s: %v", path, err)
+					}
+
+					log.Printf("Uploaded file: %s", path)
+					log.Printf("Public URL: %s", publicURL)
+				}
+				return nil
 			})
+
 			if err != nil {
-				return fmt.Errorf("failed to upload file %s: %v", path, err)
+				log.Fatalf("Error uploading files: %v", err)
 			}
 
-			publicURL := fmt.Sprintf("http://%s:%s/%s/%s", MINIO_HOST, MINIO_PORT, MINIO_DEFAULT_BUCKETS, key)
-			log.Printf("Uploaded file: %s", key)
-			log.Printf("Public URL: %s", publicURL)
+			log.Println("All files uploaded successfully")
+
+			p.ProduceMsg(context.Background(), "file-process-out", &fileProcess)
 		}
-		return nil
-	})
 
-	if err != nil {
-		log.Fatalf("Error uploading files: %v", err)
 	}
-
-	log.Println("All files uploaded successfully")
-}
-
-func isErrorBucketAlreadyExists(err error) bool {
-	if aerr, ok := err.(awserr.Error); ok {
-		switch aerr.Code() {
-		case s3.ErrCodeBucketAlreadyExists:
-			return true
-		case s3.ErrCodeBucketAlreadyOwnedByYou:
-			return true
-		default:
-			return false
-		}
-	}
-	return false
 }

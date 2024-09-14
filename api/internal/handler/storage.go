@@ -62,6 +62,14 @@ func (f *FiberHandler) handleGetFile(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, fmt.Sprintf("Failed to retrieve file metadata: %v", err))
 	}
 
+	if grpcResponse.IsProcessed {
+		err = c.Redirect(fmt.Sprintf("http://3.7.73.40:13000%s", grpcResponse.StorageLocation))
+		if err != nil {
+			return fiber.NewError(fiber.StatusInternalServerError, fmt.Sprintf("Failed to serve file: %v", err))
+		}
+		return nil
+	}
+
 	// Construct the file path from the storage location
 	filePath := "../../.data" + grpcResponse.StorageLocation
 

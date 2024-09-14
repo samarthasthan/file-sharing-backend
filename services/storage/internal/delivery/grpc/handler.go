@@ -10,6 +10,7 @@ import (
 	"os"
 
 	"github.com/google/uuid"
+	"github.com/samarthasthan/21BRS1248_Backend/common/models"
 	"github.com/samarthasthan/21BRS1248_Backend/common/proto_go"
 	"github.com/samarthasthan/21BRS1248_Backend/services/storage/internal/database/sqlc"
 	"google.golang.org/grpc/codes"
@@ -48,6 +49,14 @@ func (s *StorageService) UploadFile(ctx context.Context, req *proto_go.UploadFil
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to save file metadata: %v", err)
 	}
+
+	go func() {
+		// Publish message to Kafka
+		s.p.ProduceMsg(context.Background(), "file-process-in", &models.FileProcess{
+			ID:   uuid,
+			Path: fmt.Sprintf("/uploads/%s", uuid+"_"+req.GetFileName()),
+		})
+	}()
 
 	return &proto_go.UploadFileResponse{
 		FileId:  uuid,
