@@ -1,8 +1,9 @@
 -- name: UploadFileByEmail :exec
-INSERT INTO Files (UserID, FileName, FileSize, FileType, StorageLocation, UploadDate, ExpiresAt)
+INSERT INTO Files (FileID,UserID, FileName, FileSize, FileType, StorageLocation, UploadDate, ExpiresAt)
 VALUES (
-    (SELECT UserID FROM Users WHERE Email = $1),
-    $2, $3, $4, $5, $6, $7
+    $1,
+    (SELECT UserID FROM Users WHERE Email = $2),
+    $3, $4, $5, $6, $7, $8
 );
 
 

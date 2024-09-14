@@ -22,3 +22,12 @@ func (r *Repository) UploadFile(ctx context.Context, in *sqlc.UploadFileByEmailP
 	}
 	return nil
 }
+
+// Get file from the database
+func (r *Repository) GetFile(ctx context.Context, in string) (*sqlc.File, error) {
+	file, err := r.Queries.GetFileByID(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	return &file, nil
+}

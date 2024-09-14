@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"fmt"
 	"io/ioutil"
+	"os"
 
 	"mime/multipart"
 
@@ -43,8 +45,37 @@ func (f *FiberHandler) handleFileUpload(c *fiber.Ctx) error {
 	})
 }
 
-// handleGetFile
+// handleGetFile handles file download by file ID
 func (f *FiberHandler) handleGetFile(c *fiber.Ctx) error {
+	// Get the file ID from the URL parameters
+	fileID := c.Params("file_id")
+	if fileID == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "File ID is required")
+	}
+
+	// Call the gRPC service to get the file metadata (including its storage location)
+	grpcResponse, err := f.fileClient.GetFileMetadata(c.Context(), &proto_go.FileMetadataRequest{
+		FileId: fileID,
+	})
+	if err != nil {
+		// If there's an error, return it
+		return fiber.NewError(fiber.StatusInternalServerError, fmt.Sprintf("Failed to retrieve file metadata: %v", err))
+	}
+
+	// Construct the file path from the storage location
+	filePath := "../../.data" + grpcResponse.StorageLocation
+
+	// Check if the file exists at the given path
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return fiber.NewError(fiber.StatusNotFound, "File not found")
+	}
+
+	// Serve the file for download
+	err = c.Download(filePath)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, fmt.Sprintf("Failed to serve file: %v", err))
+	}
+
 	return nil
 }
 

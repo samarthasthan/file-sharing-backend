@@ -35,6 +35,7 @@ func (s *StorageService) UploadFile(ctx context.Context, req *proto_go.UploadFil
 	fileSize := len(req.GetFileData())
 
 	err = s.repo.UploadFile(ctx, &sqlc.UploadFileByEmailParams{
+		Fileid:          uuid,
 		Email:           req.Email,
 		Filename:        req.GetFileName(),
 		Filetype:        fileType,
@@ -49,6 +50,20 @@ func (s *StorageService) UploadFile(ctx context.Context, req *proto_go.UploadFil
 	}
 
 	return &proto_go.UploadFileResponse{
+		FileId:  uuid,
 		Message: "File uploaded successfully",
+	}, nil
+}
+
+// GetFile handles file download
+func (s *StorageService) GetFileMetadata(ctx context.Context, req *proto_go.FileMetadataRequest) (*proto_go.FileMetadataResponse, error) {
+	file, err := s.repo.GetFile(ctx, req.GetFileId())
+	if err != nil {
+		return nil, status.Errorf(codes.NotFound, "file not found: %v", err)
+	}
+
+	return &proto_go.FileMetadataResponse{
+		IsProcessed:     file.Isprocessed.Bool,
+		StorageLocation: file.Storagelocation,
 	}, nil
 }

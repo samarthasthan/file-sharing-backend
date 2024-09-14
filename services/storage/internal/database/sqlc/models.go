@@ -10,7 +10,7 @@ import (
 )
 
 type File struct {
-	Fileid          int32
+	Fileid          string
 	Userid          string
 	Filename        string
 	Filesize        int64

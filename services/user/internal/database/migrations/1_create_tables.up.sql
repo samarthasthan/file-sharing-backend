@@ -13,7 +13,7 @@ CREATE TABLE Users (
 
 
 CREATE TABLE Files (
-    FileID SERIAL PRIMARY KEY,                  -- Unique ID for each file
+    FileID CHAR(36) PRIMARY KEY,                 -- Unique ID for each file
     UserID CHAR(36) NOT NULL,                   -- Foreign key referencing the user
     FileName VARCHAR(255) NOT NULL,             -- Original file name
     FileSize BIGINT NOT NULL,                   -- Size of the file in bytes

@@ -16,7 +16,7 @@ DELETE FROM Files
 WHERE FileID = $1
 `
 
-func (q *Queries) DeleteFile(ctx context.Context, fileid int32) error {
+func (q *Queries) DeleteFile(ctx context.Context, fileid string) error {
 	_, err := q.db.ExecContext(ctx, deleteFile, fileid)
 	return err
 }
@@ -67,7 +67,7 @@ FROM Files
 WHERE FileID = $1
 `
 
-func (q *Queries) GetFileByID(ctx context.Context, fileid int32) (File, error) {
+func (q *Queries) GetFileByID(ctx context.Context, fileid string) (File, error) {
 	row := q.db.QueryRowContext(ctx, getFileByID, fileid)
 	var i File
 	err := row.Scan(
@@ -131,7 +131,7 @@ SET IsProcessed = TRUE, UpdatedAt = CURRENT_TIMESTAMP
 WHERE FileID = $1
 `
 
-func (q *Queries) MarkFileAsProcessed(ctx context.Context, fileid int32) error {
+func (q *Queries) MarkFileAsProcessed(ctx context.Context, fileid string) error {
 	_, err := q.db.ExecContext(ctx, markFileAsProcessed, fileid)
 	return err
 }
@@ -185,14 +185,16 @@ func (q *Queries) SearchFiles(ctx context.Context, arg SearchFilesParams) ([]Fil
 }
 
 const uploadFileByEmail = `-- name: UploadFileByEmail :exec
-INSERT INTO Files (UserID, FileName, FileSize, FileType, StorageLocation, UploadDate, ExpiresAt)
+INSERT INTO Files (FileID,UserID, FileName, FileSize, FileType, StorageLocation, UploadDate, ExpiresAt)
 VALUES (
-    (SELECT UserID FROM Users WHERE Email = $1),
-    $2, $3, $4, $5, $6, $7
+    $1,
+    (SELECT UserID FROM Users WHERE Email = $2),
+    $3, $4, $5, $6, $7, $8
 )
 `
 
 type UploadFileByEmailParams struct {
+	Fileid          string
 	Email           string
 	Filename        string
 	Filesize        int64
@@ -204,6 +206,7 @@ type UploadFileByEmailParams struct {
 
 func (q *Queries) UploadFileByEmail(ctx context.Context, arg UploadFileByEmailParams) error {
 	_, err := q.db.ExecContext(ctx, uploadFileByEmail,
+		arg.Fileid,
 		arg.Email,
 		arg.Filename,
 		arg.Filesize,

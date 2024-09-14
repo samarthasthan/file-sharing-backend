@@ -25,6 +25,7 @@ services:
       - "${MINIO_PORT}:9000"
       - "${MINIO_WEB_PORT}:9001"
     environment:
+      - MINIO_FORCE_NEW_KEYS=yes
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
       - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
       - MINIO_HOST=${MINIO_HOST}
