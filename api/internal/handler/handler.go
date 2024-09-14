@@ -20,10 +20,11 @@ type Handler interface {
 type FiberHandler struct {
 	app        *fiber.App
 	userClient proto_go.UserServiceClient
+	fileClient proto_go.FileServiceClient
 }
 
 // NewFiberHandler creates a new Fiber handler with gRPC and Zipkin
-func NewFiberHandler(us proto_go.UserServiceClient) *FiberHandler {
+func NewFiberHandler(us proto_go.UserServiceClient, fl proto_go.FileServiceClient) *FiberHandler {
 	// Initialize Zipkin tracer
 	tracer, _, err := zipkinc.NewTracer("api-gateway")
 	if err != nil {
@@ -36,7 +37,11 @@ func NewFiberHandler(us proto_go.UserServiceClient) *FiberHandler {
 
 	// Initialize Prometheus metrics for Fiber
 	prometheus := fiberprometheus.New("api-gateway")
-	app := fiber.New()
+	app := fiber.New(
+		fiber.Config{
+			BodyLimit: 1024 * 1024 * 10,
+		},
+	)
 
 	// Register Prometheus metrics endpoint
 	prometheus.RegisterAt(app, "/metrics")
@@ -56,7 +61,7 @@ func NewFiberHandler(us proto_go.UserServiceClient) *FiberHandler {
 	app.Use(zipkinMiddleware(tracer))
 
 	// Return the Fiber handler
-	return &FiberHandler{app: app, userClient: us}
+	return &FiberHandler{app: app, userClient: us, fileClient: fl}
 }
 
 // Start starts the Fiber server on the specified port
@@ -67,6 +72,7 @@ func (f *FiberHandler) Start(port string) error {
 // Handle registers the routes for the Fiber app
 func (f *FiberHandler) Handle() {
 	f.handleUserRoutes()
+	f.handleFileRoutes()
 }
 
 // Handle user routes
@@ -75,6 +81,12 @@ func (f *FiberHandler) handleUserRoutes() {
 	user := f.app.Group("/user")
 	user.Post("/login", f.login)
 	user.Post("/register", f.register)
+}
+
+// Hnadle file routes
+func (f *FiberHandler) handleFileRoutes() {
+	f.app.Post("/upload", f.handleFileUpload)
+	f.app.Get("/metadata/:file_id", f.handleGetFileMetadata)
 }
 
 // zipkinMiddleware adds Zipkin tracing to the Fiber middleware

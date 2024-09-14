@@ -10,6 +10,7 @@ import (
 
 var (
 	userClient proto_go.UserServiceClient
+	fileClient proto_go.FileServiceClient
 	err        error
 )
 
@@ -23,11 +24,20 @@ func init() {
 
 	// Create the UserService gRPC client
 	userClient = proto_go.NewUserServiceClient(us.GetConnection())
+
+	// Initialize the gRPC client
+	fs := grpc_common.NewGrpcClient("localhost:9002")
+	err = fs.Connect()
+	if err != nil {
+		log.Fatalf("Failed to connect to gRPC server: %v", err)
+	}
+
+	fileClient = proto_go.NewFileServiceClient(fs.GetConnection())
 }
 
 func main() {
 	// Create a Fiber handler with the gRPC client
-	f := handler.NewFiberHandler(userClient)
+	f := handler.NewFiberHandler(userClient, fileClient)
 
 	// Register routes
 	f.Handle()

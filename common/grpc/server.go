@@ -6,9 +6,18 @@ import (
 
 	"github.com/openzipkin/zipkin-go"
 	zipkingrpc "github.com/openzipkin/zipkin-go/middleware/grpc"
+	"github.com/samarthasthan/21BRS1248_Backend/common/env"
 	"github.com/samarthasthan/21BRS1248_Backend/common/logger"
 	"google.golang.org/grpc"
 )
+
+var (
+	MAX_FILE_SIZE int
+)
+
+func init() {
+	MAX_FILE_SIZE = env.GetEnvInt("MAX_FILE_SIZE", 500*1024*1024)
+}
 
 type GrpcServer struct {
 	log    *logger.Logger
@@ -19,7 +28,8 @@ type GrpcServer struct {
 // NewGrpcServer creates a new gRPC server with Zipkin tracing
 func NewGrpcServer(log *logger.Logger, tracer *zipkin.Tracer) *GrpcServer {
 	// Creating a new gRPC server with Zipkin stats handler
-	server := grpc.NewServer(grpc.StatsHandler(zipkingrpc.NewServerHandler(tracer)))
+	server := grpc.NewServer(grpc.StatsHandler(zipkingrpc.NewServerHandler(tracer)), grpc.MaxRecvMsgSize(MAX_FILE_SIZE),
+		grpc.MaxSendMsgSize(MAX_FILE_SIZE))
 	return &GrpcServer{log: log, server: server, tracer: tracer}
 }
 
