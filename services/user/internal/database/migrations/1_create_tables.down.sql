@@ -1,1 +1,2 @@
+DROP TABLE Files;
 DROP TABLE Users;

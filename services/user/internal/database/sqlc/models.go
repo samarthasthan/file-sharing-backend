@@ -9,6 +9,19 @@ import (
 	"time"
 )
 
+type File struct {
+	Fileid          int32
+	Userid          string
+	Filename        string
+	Filesize        int64
+	Filetype        string
+	Storagelocation string
+	Uploaddate      time.Time
+	Isprocessed     sql.NullBool
+	Expiresat       sql.NullTime
+	Updatedat       time.Time
+}
+
 type User struct {
 	Userid     string
 	Firstname  string

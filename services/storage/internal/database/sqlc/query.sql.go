@@ -7,28 +7,210 @@ package sqlc
 
 import (
 	"context"
+	"database/sql"
+	"time"
 )
 
-const createAccount = `-- name: CreateAccount :exec
-INSERT INTO Users (UserID, FirstName, LastName, Email, Password)
-VALUES ($1, $2, $3, $4, $5)
+const deleteFile = `-- name: DeleteFile :exec
+DELETE FROM Files
+WHERE FileID = $1
 `
 
-type CreateAccountParams struct {
-	Userid    string
-	Firstname string
-	Lastname  string
-	Email     string
-	Password  string
+func (q *Queries) DeleteFile(ctx context.Context, fileid int32) error {
+	_, err := q.db.ExecContext(ctx, deleteFile, fileid)
+	return err
 }
 
-func (q *Queries) CreateAccount(ctx context.Context, arg CreateAccountParams) error {
-	_, err := q.db.ExecContext(ctx, createAccount,
-		arg.Userid,
-		arg.Firstname,
-		arg.Lastname,
+const getExpiredFiles = `-- name: GetExpiredFiles :many
+SELECT FileID, UserID, FileName, FileSize, FileType, StorageLocation, UploadDate, IsProcessed, ExpiresAt, UpdatedAt
+FROM Files
+WHERE ExpiresAt < CURRENT_TIMESTAMP AND IsProcessed = FALSE
+`
+
+func (q *Queries) GetExpiredFiles(ctx context.Context) ([]File, error) {
+	rows, err := q.db.QueryContext(ctx, getExpiredFiles)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []File
+	for rows.Next() {
+		var i File
+		if err := rows.Scan(
+			&i.Fileid,
+			&i.Userid,
+			&i.Filename,
+			&i.Filesize,
+			&i.Filetype,
+			&i.Storagelocation,
+			&i.Uploaddate,
+			&i.Isprocessed,
+			&i.Expiresat,
+			&i.Updatedat,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getFileByID = `-- name: GetFileByID :one
+SELECT FileID, UserID, FileName, FileSize, FileType, StorageLocation, UploadDate, IsProcessed, ExpiresAt, UpdatedAt
+FROM Files
+WHERE FileID = $1
+`
+
+func (q *Queries) GetFileByID(ctx context.Context, fileid int32) (File, error) {
+	row := q.db.QueryRowContext(ctx, getFileByID, fileid)
+	var i File
+	err := row.Scan(
+		&i.Fileid,
+		&i.Userid,
+		&i.Filename,
+		&i.Filesize,
+		&i.Filetype,
+		&i.Storagelocation,
+		&i.Uploaddate,
+		&i.Isprocessed,
+		&i.Expiresat,
+		&i.Updatedat,
+	)
+	return i, err
+}
+
+const getFilesByUser = `-- name: GetFilesByUser :many
+SELECT FileID, UserID, FileName, FileSize, FileType, StorageLocation, UploadDate, IsProcessed, ExpiresAt, UpdatedAt
+FROM Files
+WHERE UserID = $1
+`
+
+func (q *Queries) GetFilesByUser(ctx context.Context, userid string) ([]File, error) {
+	rows, err := q.db.QueryContext(ctx, getFilesByUser, userid)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []File
+	for rows.Next() {
+		var i File
+		if err := rows.Scan(
+			&i.Fileid,
+			&i.Userid,
+			&i.Filename,
+			&i.Filesize,
+			&i.Filetype,
+			&i.Storagelocation,
+			&i.Uploaddate,
+			&i.Isprocessed,
+			&i.Expiresat,
+			&i.Updatedat,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const markFileAsProcessed = `-- name: MarkFileAsProcessed :exec
+UPDATE Files
+SET IsProcessed = TRUE, UpdatedAt = CURRENT_TIMESTAMP
+WHERE FileID = $1
+`
+
+func (q *Queries) MarkFileAsProcessed(ctx context.Context, fileid int32) error {
+	_, err := q.db.ExecContext(ctx, markFileAsProcessed, fileid)
+	return err
+}
+
+const searchFiles = `-- name: SearchFiles :many
+SELECT FileID, UserID, FileName, FileSize, FileType, StorageLocation, UploadDate, IsProcessed, ExpiresAt, UpdatedAt
+FROM Files
+WHERE FileName ILIKE '%' || $1 || '%' OR 
+      UploadDate::date = $2 OR
+      FileType ILIKE '%' || $3 || '%'
+`
+
+type SearchFilesParams struct {
+	Column1    sql.NullString
+	Uploaddate time.Time
+	Column3    sql.NullString
+}
+
+func (q *Queries) SearchFiles(ctx context.Context, arg SearchFilesParams) ([]File, error) {
+	rows, err := q.db.QueryContext(ctx, searchFiles, arg.Column1, arg.Uploaddate, arg.Column3)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []File
+	for rows.Next() {
+		var i File
+		if err := rows.Scan(
+			&i.Fileid,
+			&i.Userid,
+			&i.Filename,
+			&i.Filesize,
+			&i.Filetype,
+			&i.Storagelocation,
+			&i.Uploaddate,
+			&i.Isprocessed,
+			&i.Expiresat,
+			&i.Updatedat,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const uploadFileByEmail = `-- name: UploadFileByEmail :exec
+INSERT INTO Files (UserID, FileName, FileSize, FileType, StorageLocation, UploadDate, ExpiresAt)
+VALUES (
+    (SELECT UserID FROM Users WHERE Email = $1),
+    $2, $3, $4, $5, $6, $7
+)
+`
+
+type UploadFileByEmailParams struct {
+	Email           string
+	Filename        string
+	Filesize        int64
+	Filetype        string
+	Storagelocation string
+	Uploaddate      time.Time
+	Expiresat       sql.NullTime
+}
+
+func (q *Queries) UploadFileByEmail(ctx context.Context, arg UploadFileByEmailParams) error {
+	_, err := q.db.ExecContext(ctx, uploadFileByEmail,
 		arg.Email,
-		arg.Password,
+		arg.Filename,
+		arg.Filesize,
+		arg.Filetype,
+		arg.Storagelocation,
+		arg.Uploaddate,
+		arg.Expiresat,
 	)
 	return err
 }

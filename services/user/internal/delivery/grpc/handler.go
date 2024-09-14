@@ -9,7 +9,6 @@ import (
 	"github.com/google/uuid"
 	bcrpyt "github.com/samarthasthan/21BRS1248_Backend/common/bycrpyt"
 	"github.com/samarthasthan/21BRS1248_Backend/common/proto_go"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // Register registers a new user
@@ -61,7 +60,7 @@ func (s *UserService) Login(ctx context.Context, in *proto_go.LoginRequest) (*pr
 	}
 
 	// Create a JWT token
-	token, time, err := s.createToken(in)
+	token, err := s.createToken(in)
 	if err != nil {
 		s.log.Errorf("Failed to create token for user with email: %s: %v", in.Email, err)
 		return &proto_go.LoginResponse{
@@ -74,10 +73,8 @@ func (s *UserService) Login(ctx context.Context, in *proto_go.LoginRequest) (*pr
 	return &proto_go.LoginResponse{
 		SessionId: token,
 		Success:   true,
-		ExpiresAt: &timestamppb.Timestamp{
-			Seconds: time.Unix(),
-		},
-		Message: "User logged in successfully",
+		ExpiresAt: nil,
+		Message:   "User logged in successfully",
 	}, nil
 
 }
@@ -90,32 +87,35 @@ func (s *UserService) CheckJWT(ctx context.Context, in *proto_go.CheckJWTRequest
 			Valid: false,
 		}, nil
 	}
-	if claims["expires_at"].(float64) < float64(time.Now().Unix()) {
+	// Parse and check the "expires_at" claim
+	expires_at := claims["expires_at"]
+	expirationTime, err := time.Parse(time.RFC3339, expires_at.(string))
+	if expirationTime.Before(time.Now()) {
 		return &proto_go.CheckJWTResponse{
 			Valid: false,
 		}, nil
 	}
+
 	return &proto_go.CheckJWTResponse{
-		Valid:     true,
-		Email:     claims["email"].(string),
-		ExpiresAt: claims["expires_at"].(*timestamppb.Timestamp),
+		Valid: true,
+		Email: claims["email"].(string),
+		// ExpiresAt: *timestamppb.Timestamp,
 	}, nil
 }
 
 // Helper function to create a JWT token
-func (s *UserService) createToken(in *proto_go.LoginRequest) (string, *time.Time, error) {
-	time := time.Now().Add(356 * time.Hour * 24)
+func (s *UserService) createToken(in *proto_go.LoginRequest) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256,
 		jwt.MapClaims{
 			"email":      in.Email,
-			"expires_at": time,
+			"expires_at": time.Now().Add(356 * time.Hour * 24),
 		})
 
 	tokenString, err := token.SignedString([]byte("secret"))
 	if err != nil {
-		return "", &time, err
+		return "", err
 	}
-	return tokenString, &time, nil
+	return tokenString, nil
 }
 
 // Validate the JWT token
