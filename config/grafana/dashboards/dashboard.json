@@ -242,8 +242,8 @@
         "enableLogDetails": true,
         "prettifyLogMessage": false,
         "showCommonLabels": false,
-        "showLabels": false,
-        "showTime": false,
+        "showLabels": true,
+        "showTime": true,
         "sortOrder": "Descending",
         "wrapLogMessage": false
       },
@@ -254,9 +254,20 @@
             "uid": "P982945308D3682D1"
           },
           "editorMode": "builder",
-          "expr": "{severity=\"info\"} |= ``",
+          "expr": "{application=\"api-gateway\"} |= ``",
           "queryType": "range",
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "P982945308D3682D1"
+          },
+          "editorMode": "builder",
+          "expr": "{application=\"user\"} |= ``",
+          "hide": false,
+          "queryType": "range",
+          "refId": "B"
         }
       ],
       "title": "Logs",

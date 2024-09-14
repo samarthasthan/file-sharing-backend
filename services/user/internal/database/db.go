@@ -37,7 +37,7 @@ func (s *Postgres) Connect(driverName string, addr string) error {
 
 func (s *Postgres) RegisterZipkin(tracer *zipkin.Tracer) string {
 	// Register our zipkinsql wrapper for the provided MySQL driver.
-	driverName, err := zipkinsql.Register("mysql", tracer, zipkinsql.WithAllTraceOptions())
+	driverName, err := zipkinsql.Register("postgres", tracer, zipkinsql.WithAllTraceOptions())
 	if err != nil {
 		log.Fatalf("unable to register zipkin driver: %v\n", err)
 	}

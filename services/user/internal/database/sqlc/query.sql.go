@@ -9,12 +9,24 @@ import (
 	"context"
 )
 
-const createAccount = `-- name: CreateAccount :exec
+const getPasswordByEmail = `-- name: GetPasswordByEmail :one
+SELECT Password FROM Users
+WHERE Email = $1
+`
+
+func (q *Queries) GetPasswordByEmail(ctx context.Context, email string) (string, error) {
+	row := q.db.QueryRowContext(ctx, getPasswordByEmail, email)
+	var password string
+	err := row.Scan(&password)
+	return password, err
+}
+
+const registerUser = `-- name: RegisterUser :exec
 INSERT INTO Users (UserID, FirstName, LastName, Email, Password)
 VALUES ($1, $2, $3, $4, $5)
 `
 
-type CreateAccountParams struct {
+type RegisterUserParams struct {
 	Userid    string
 	Firstname string
 	Lastname  string
@@ -22,8 +34,8 @@ type CreateAccountParams struct {
 	Password  string
 }
 
-func (q *Queries) CreateAccount(ctx context.Context, arg CreateAccountParams) error {
-	_, err := q.db.ExecContext(ctx, createAccount,
+func (q *Queries) RegisterUser(ctx context.Context, arg RegisterUserParams) error {
+	_, err := q.db.ExecContext(ctx, registerUser,
 		arg.Userid,
 		arg.Firstname,
 		arg.Lastname,

@@ -22,8 +22,9 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type UserServiceClient interface {
-	SignUp(ctx context.Context, in *SignUpRequest, opts ...grpc.CallOption) (*SignUpResponse, error)
-	SignIn(ctx context.Context, in *SignInRequest, opts ...grpc.CallOption) (*SignInResponse, error)
+	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error)
+	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
+	CheckJWT(ctx context.Context, in *CheckJWTRequest, opts ...grpc.CallOption) (*CheckJWTResponse, error)
 }
 
 type userServiceClient struct {
@@ -34,18 +35,27 @@ func NewUserServiceClient(cc grpc.ClientConnInterface) UserServiceClient {
 	return &userServiceClient{cc}
 }
 
-func (c *userServiceClient) SignUp(ctx context.Context, in *SignUpRequest, opts ...grpc.CallOption) (*SignUpResponse, error) {
-	out := new(SignUpResponse)
-	err := c.cc.Invoke(ctx, "/UserService/SignUp", in, out, opts...)
+func (c *userServiceClient) Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error) {
+	out := new(RegisterResponse)
+	err := c.cc.Invoke(ctx, "/UserService/Register", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *userServiceClient) SignIn(ctx context.Context, in *SignInRequest, opts ...grpc.CallOption) (*SignInResponse, error) {
-	out := new(SignInResponse)
-	err := c.cc.Invoke(ctx, "/UserService/SignIn", in, out, opts...)
+func (c *userServiceClient) Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error) {
+	out := new(LoginResponse)
+	err := c.cc.Invoke(ctx, "/UserService/Login", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) CheckJWT(ctx context.Context, in *CheckJWTRequest, opts ...grpc.CallOption) (*CheckJWTResponse, error) {
+	out := new(CheckJWTResponse)
+	err := c.cc.Invoke(ctx, "/UserService/CheckJWT", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -56,8 +66,9 @@ func (c *userServiceClient) SignIn(ctx context.Context, in *SignInRequest, opts 
 // All implementations must embed UnimplementedUserServiceServer
 // for forward compatibility
 type UserServiceServer interface {
-	SignUp(context.Context, *SignUpRequest) (*SignUpResponse, error)
-	SignIn(context.Context, *SignInRequest) (*SignInResponse, error)
+	Register(context.Context, *RegisterRequest) (*RegisterResponse, error)
+	Login(context.Context, *LoginRequest) (*LoginResponse, error)
+	CheckJWT(context.Context, *CheckJWTRequest) (*CheckJWTResponse, error)
 	mustEmbedUnimplementedUserServiceServer()
 }
 
@@ -65,11 +76,14 @@ type UserServiceServer interface {
 type UnimplementedUserServiceServer struct {
 }
 
-func (UnimplementedUserServiceServer) SignUp(context.Context, *SignUpRequest) (*SignUpResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SignUp not implemented")
+func (UnimplementedUserServiceServer) Register(context.Context, *RegisterRequest) (*RegisterResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Register not implemented")
 }
-func (UnimplementedUserServiceServer) SignIn(context.Context, *SignInRequest) (*SignInResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SignIn not implemented")
+func (UnimplementedUserServiceServer) Login(context.Context, *LoginRequest) (*LoginResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Login not implemented")
+}
+func (UnimplementedUserServiceServer) CheckJWT(context.Context, *CheckJWTRequest) (*CheckJWTResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CheckJWT not implemented")
 }
 func (UnimplementedUserServiceServer) mustEmbedUnimplementedUserServiceServer() {}
 
@@ -84,38 +98,56 @@ func RegisterUserServiceServer(s grpc.ServiceRegistrar, srv UserServiceServer) {
 	s.RegisterService(&UserService_ServiceDesc, srv)
 }
 
-func _UserService_SignUp_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SignUpRequest)
+func _UserService_Register_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RegisterRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(UserServiceServer).SignUp(ctx, in)
+		return srv.(UserServiceServer).Register(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/UserService/SignUp",
+		FullMethod: "/UserService/Register",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UserServiceServer).SignUp(ctx, req.(*SignUpRequest))
+		return srv.(UserServiceServer).Register(ctx, req.(*RegisterRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _UserService_SignIn_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SignInRequest)
+func _UserService_Login_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LoginRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(UserServiceServer).SignIn(ctx, in)
+		return srv.(UserServiceServer).Login(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/UserService/SignIn",
+		FullMethod: "/UserService/Login",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UserServiceServer).SignIn(ctx, req.(*SignInRequest))
+		return srv.(UserServiceServer).Login(ctx, req.(*LoginRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_CheckJWT_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CheckJWTRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).CheckJWT(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/UserService/CheckJWT",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).CheckJWT(ctx, req.(*CheckJWTRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -128,12 +160,16 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*UserServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "SignUp",
-			Handler:    _UserService_SignUp_Handler,
+			MethodName: "Register",
+			Handler:    _UserService_Register_Handler,
 		},
 		{
-			MethodName: "SignIn",
-			Handler:    _UserService_SignIn_Handler,
+			MethodName: "Login",
+			Handler:    _UserService_Login_Handler,
+		},
+		{
+			MethodName: "CheckJWT",
+			Handler:    _UserService_CheckJWT_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
