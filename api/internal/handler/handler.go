@@ -110,7 +110,7 @@ func (f *FiberHandler) handleFileRoutes() {
 	f.app.Use(authMiddleware(f.userClient))
 	// Protect routes with JWT middleware
 	f.app.Post("/upload", jwtMiddleware(), f.handleFileUpload)
-	f.app.Get("/metadata/:file_id", jwtMiddleware(), f.handleGetFileMetadata)
+	f.app.Get("/metadata/:file_id", jwtMiddleware(), f.handleGetFile)
 }
 
 // zipkinMiddleware adds Zipkin tracing to the Fiber middleware
@@ -123,10 +123,8 @@ func zipkinMiddleware(tracer *zipkin.Tracer) func(*fiber.Ctx) error {
 	}
 }
 
-// authMiddleware checks JWT token using gRPC call to user service
 func authMiddleware(userClient proto_go.UserServiceClient) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		// Extract the token from the Authorization header
 		authHeader := c.Get("Authorization")
 		if authHeader == "" {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
@@ -134,10 +132,8 @@ func authMiddleware(userClient proto_go.UserServiceClient) fiber.Handler {
 			})
 		}
 
-		// Split the "Bearer <token>" format
 		token := strings.TrimPrefix(authHeader, "Bearer ")
 
-		// Call gRPC method to validate token
 		req := &proto_go.CheckJWTRequest{
 			SessionId: token,
 		}
@@ -149,10 +145,8 @@ func authMiddleware(userClient proto_go.UserServiceClient) fiber.Handler {
 			})
 		}
 
-		// Store user ID in context for future use
 		c.Locals("email", resp.Email)
 
-		// Continue to the next middleware/handler
 		return c.Next()
 	}
 }

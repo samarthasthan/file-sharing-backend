@@ -13,7 +13,7 @@ service FileService {
 
 // Request to upload file
 message UploadFileRequest {
-  string user_id = 1;   // User uploading the file
+  string email = 1;   // User uploading the file
   bytes file_data = 2;  // Binary data of the file
   string file_name = 3; // Original name of the file
 }

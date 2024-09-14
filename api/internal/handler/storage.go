@@ -1,31 +1,35 @@
 package handler
 
 import (
-	"context"
 	"io/ioutil"
 
 	"mime/multipart"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/google/uuid"
 	"github.com/samarthasthan/21BRS1248_Backend/common/proto_go"
 )
 
-// Handle file upload by sending a request to the gRPC server
 func (f *FiberHandler) handleFileUpload(c *fiber.Ctx) error {
+	// Retrieve the email from Fiber context
+	email := c.Locals("email").(string)
+	if email == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "Email is required")
+	}
+
 	file, err := c.FormFile("file")
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "File is required")
 	}
+
 	// Read file data
 	fileData, err := readMultipartFile(file)
 	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "Failed to read file 1")
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to read file")
 	}
 
 	// Call gRPC service to upload the file
-	grpcResponse, err := f.fileClient.UploadFile(context.Background(), &proto_go.UploadFileRequest{
-		UserId:   uuid.New().String(), // Assuming user_id is set from JWT
+	grpcResponse, err := f.fileClient.UploadFile(c.Context(), &proto_go.UploadFileRequest{
+		Email:    email,
 		FileName: file.Filename,
 		FileData: fileData,
 	})
@@ -39,18 +43,9 @@ func (f *FiberHandler) handleFileUpload(c *fiber.Ctx) error {
 	})
 }
 
-// Handle retrieving file metadata
-func (f *FiberHandler) handleGetFileMetadata(c *fiber.Ctx) error {
-	fileID := c.Params("file_id")
-
-	grpcResponse, err := f.fileClient.GetFileMetadata(context.Background(), &proto_go.FileMetadataRequest{
-		FileId: fileID,
-	})
-	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "Failed to get file metadata")
-	}
-
-	return c.JSON(grpcResponse)
+// handleGetFile
+func (f *FiberHandler) handleGetFile(c *fiber.Ctx) error {
+	return nil
 }
 
 // Helper function to read file from multipart form

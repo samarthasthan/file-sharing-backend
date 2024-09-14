@@ -3,6 +3,8 @@ package grpc
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"net/http"
 	"time"
 
 	"os"
@@ -19,23 +21,25 @@ const fileStoragePath = "../../../.data/uploads/"
 
 // UploadFile handles file upload and saves metadata in PostgreSQL
 func (s *StorageService) UploadFile(ctx context.Context, req *proto_go.UploadFileRequest) (*proto_go.UploadFileResponse, error) {
+
 	uuid := uuid.New().String()
-	os.MkdirAll(fileStoragePath, os.ModePerm)
-	// Save file to local disk
 	filePath := fileStoragePath + uuid + "_" + req.GetFileName()
+
+	os.MkdirAll(fileStoragePath, os.ModePerm)
 	err := os.WriteFile(filePath, req.GetFileData(), 0644)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to save file: %v", err)
 	}
 
-	// Save file metadata to PostgreSQL
-	var res *proto_go.UploadFileResponse
+	fileType := http.DetectContentType(req.GetFileData())
+	fileSize := len(req.GetFileData())
+
 	err = s.repo.UploadFile(ctx, &sqlc.UploadFileByEmailParams{
-		Email:           "samarthasthan27@gmail.com",
+		Email:           req.Email,
 		Filename:        req.GetFileName(),
-		Filetype:        "image/jpeg",
-		Filesize:        123456,
-		Storagelocation: filePath,
+		Filetype:        fileType,
+		Filesize:        int64(fileSize),
+		Storagelocation: fmt.Sprintf("/uploads/%s", uuid+"_"+req.GetFileName()),
 		Uploaddate:      time.Now(),
 		Expiresat:       sql.NullTime{Time: time.Now().AddDate(0, 0, 7), Valid: true},
 	})
@@ -43,21 +47,8 @@ func (s *StorageService) UploadFile(ctx context.Context, req *proto_go.UploadFil
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to save file metadata: %v", err)
 	}
-	return res, nil
-}
 
-// GetFileMetadata handles retrieving file metadata from PostgreSQL
-func (s *StorageService) GetFileMetadata(ctx context.Context, req *proto_go.FileMetadataRequest) (*proto_go.FileMetadataResponse, error) {
-	// fileMeta, err := db.GetFileMetadata(req.GetFileId())
-	// if err != nil {
-	// 	return nil, status.Errorf(codes.NotFound, "file not found: %v", err)
-	// }
-
-	// return &proto_go.FileMetadataResponse{
-	// 	FileName:        fileMeta.FileName,
-	// 	UploadDate:      fileMeta.UploadDate.Format(time.RFC3339),
-	// 	FileSize:        fileMeta.FileSize,
-	// 	StorageLocation: fileMeta.StorageLocation,
-	// }, nil
-	return nil, nil
+	return &proto_go.UploadFileResponse{
+		Message: "File uploaded successfully",
+	}, nil
 }
