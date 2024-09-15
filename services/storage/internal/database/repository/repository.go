@@ -3,15 +3,17 @@ package repository
 import (
 	"context"
 
+	"github.com/redis/go-redis/v9"
 	"github.com/samarthasthan/21BRS1248_Backend/services/storage/internal/database/sqlc"
 )
 
 type Repository struct {
 	*sqlc.Queries
+	Redis *redis.Client
 }
 
-func NewRepository(q *sqlc.Queries) *Repository {
-	return &Repository{Queries: q}
+func NewRepository(q *sqlc.Queries, r *redis.Client) *Repository {
+	return &Repository{Queries: q, Redis: r}
 }
 
 // Upload file to the database

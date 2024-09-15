@@ -30,6 +30,8 @@ var (
 	TEMP_PATH                 string
 	KAFKA_PORT                string
 	KAFKA_HOST                string
+	REDIS_HOST                string
+	REDIS_PORT                string
 )
 
 func init() {
@@ -37,11 +39,13 @@ func init() {
 	STORAGE_DB_PORT = env.GetEnv("STORAGE_DB_PORT", "5432")
 	STORAGE_POSTGRES_STORAGE = env.GetEnv("STORAGE_POSTGRES_STORAGE", "root")
 	STORAGE_POSTGRES_PASSWORD = env.GetEnv("STORAGE_POSTGRES_PASSWORD", "password")
-	STORAGE_POSTGRES_DB = env.GetEnv("STORAGE_POSTGRES_DB", "user-db")
+	STORAGE_POSTGRES_DB = env.GetEnv("STORAGE_POSTGRES_DB", "postgres")
 	STORAGE_POSTGRES_HOST = env.GetEnv("STORAGE_POSTGRES_HOST", "localhost")
 	TEMP_PATH = env.GetEnv("TEMP_PATH", "/tmp/uploads")
 	KAFKA_PORT = env.GetEnv("KAFKA_PORT", "9092")
 	KAFKA_HOST = env.GetEnv("KAFKA_HOST", "localhost")
+	REDIS_HOST = env.GetEnv("REDIS_HOST", "localhost")
+	REDIS_PORT = env.GetEnv("REDIS_PORT", "6379")
 }
 
 func main() {
@@ -74,8 +78,16 @@ func main() {
 	db.RegisterZipkin(tracer)
 	defer db.Close()
 
+	// Connect to Redis
+	rd := database.NewRedis()
+	err = rd.Connect(fmt.Sprintf("%s:%s", REDIS_HOST, REDIS_PORT))
+	if err != nil {
+		log.Fatalf("Failed to connect to redis: %v", err)
+		panic(err)
+	}
+
 	// Register repository
-	repo := repository.NewRepository(db.Queries)
+	repo := repository.NewRepository(db.Queries, rd.Client)
 
 	service := grpcin.NewStorageService(log, repo, p, c)
 

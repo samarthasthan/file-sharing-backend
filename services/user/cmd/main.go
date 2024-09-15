@@ -21,6 +21,8 @@ var (
 	USER_POSTGRES_PASSWORD string
 	USER_POSTGRES_DB       string
 	USER_POSTGRES_HOST     string
+	REDIS_HOST             string
+	REDIS_PORT             string
 )
 
 func init() {
@@ -28,8 +30,10 @@ func init() {
 	USER_DB_PORT = env.GetEnv("USER_DB_PORT", "5432")
 	USER_POSTGRES_USER = env.GetEnv("USER_POSTGRES_USER", "root")
 	USER_POSTGRES_PASSWORD = env.GetEnv("USER_POSTGRES_PASSWORD", "password")
-	USER_POSTGRES_DB = env.GetEnv("USER_POSTGRES_DB", "user-db")
+	USER_POSTGRES_DB = env.GetEnv("USER_POSTGRES_DB", "postgres")
 	USER_POSTGRES_HOST = env.GetEnv("USER_POSTGRES_HOST", "localhost")
+	REDIS_HOST = env.GetEnv("REDIS_HOST", "localhost")
+	REDIS_PORT = env.GetEnv("REDIS_PORT", "6379")
 }
 
 func main() {
@@ -55,8 +59,12 @@ func main() {
 	db.RegisterZipkin(tracer)
 	defer db.Close()
 
+	// Redis connection
+	rd := database.NewRedis()
+	rd.Connect(fmt.Sprintf("%s:%s", REDIS_HOST, REDIS_PORT))
+
 	// Register repository
-	repo := repository.NewRepository(db.Queries)
+	repo := repository.NewRepository(db.Queries, rd.Client)
 
 	service := grpcin.NewUserService(repo, log)
 

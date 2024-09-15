@@ -19,4 +19,4 @@ scrape_configs:
     static_configs:
       - targets:
           - prometheus:9090
-          - api-gateway:1248
+          - localhost:1248

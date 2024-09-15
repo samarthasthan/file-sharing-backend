@@ -3,6 +3,7 @@ package grpc
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -43,7 +44,7 @@ func (s *StorageService) UploadFile(ctx context.Context, req *proto_go.UploadFil
 		Filesize:        int64(fileSize),
 		Storagelocation: fmt.Sprintf("/uploads/%s", uuid+"_"+req.GetFileName()),
 		Uploaddate:      time.Now(),
-		Expiresat:       sql.NullTime{Time: time.Now().AddDate(0, 0, 7), Valid: true},
+		Expiresat:       sql.NullTime{Time: time.Now().Add(time.Minute * 5), Valid: true},
 	})
 
 	if err != nil {
@@ -78,15 +79,33 @@ func (s *StorageService) GetFileMetadata(ctx context.Context, req *proto_go.File
 	}, nil
 }
 
-// GetFilesByUser
+// GetFilesByUser handles the retrieval of files by user with caching
 func (s *StorageService) GetFilesByUser(ctx context.Context, req *proto_go.FilesByUserRequest) (*proto_go.FilesByUserResponse, error) {
+	// Redis cache key based on user email
+	cacheKey := fmt.Sprintf("user:%s:files", req.GetEmail())
+
+	// Try to get the data from Redis
+	cachedFiles, err := s.repo.Redis.Get(ctx, cacheKey).Result()
+	if err == nil && cachedFiles != "" {
+		s.log.Info("Cache hit")
+		// If cache hit, unmarshal the cached data
+		var filesResp []*proto_go.File
+		if err := json.Unmarshal([]byte(cachedFiles), &filesResp); err == nil {
+			// Return the cached response
+			return &proto_go.FilesByUserResponse{
+				Files: filesResp,
+			}, nil
+		}
+	}
+
+	// If cache miss, query the database
 	files, err := s.repo.FilesByUserRequest(ctx, req.GetEmail())
 	if err != nil {
 		return nil, status.Errorf(codes.NotFound, "files not found: %v", err)
 	}
 
+	// Prepare the response
 	var filesResp []*proto_go.File
-
 	for _, file := range files {
 		filesResp = append(filesResp, &proto_go.File{
 			FileId:          file.Fileid,
@@ -101,6 +120,19 @@ func (s *StorageService) GetFilesByUser(ctx context.Context, req *proto_go.Files
 		})
 	}
 
+	// Marshal the response to store in Redis
+	cachedData, err := json.Marshal(filesResp)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to cache files: %v", err)
+	}
+
+	// Store the data in Redis with an expiration time (e.g., 1 hour)
+	err = s.repo.Redis.Set(ctx, cacheKey, cachedData, time.Minute*5).Err()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to set cache: %v", err)
+	}
+
+	// Return the fresh data
 	return &proto_go.FilesByUserResponse{
 		Files: filesResp,
 	}, nil

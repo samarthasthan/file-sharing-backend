@@ -43,9 +43,9 @@ services:
 
 
   # Database
-  user-db:
+  postgres:
     image: postgres:17rc1-alpine3.19
-    container_name: user-db
+    container_name: postgres
     networks:
       - storage_project
     ports:
@@ -56,6 +56,22 @@ services:
       - POSTGRES_DB=${USER_POSTGRES_DB}
     volumes:
       - ../../.data/userdb:/var/lib/postgresql/data
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    networks:
+      - storage_project
+    ports:
+      - "${REDIS_PORT}:6379"
+
+  redis2:
+    image: redis:latest
+    container_name: redis2
+    networks:
+      - storage_project
+    ports:
+      - "14001:6379"
 
   # S3 Compatible Storage
   minio:
