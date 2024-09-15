@@ -13,9 +13,9 @@ service FileService {
 
 // Request to upload file
 message UploadFileRequest {
-  string email = 1;   // User uploading the file
-  bytes file_data = 2;  // Binary data of the file
-  string file_name = 3; // Original name of the file
+  string email = 1;   
+  bytes file_data = 2;  
+  string file_name = 3; 
 }
 
 // Response after uploading the file
@@ -32,4 +32,21 @@ message FileMetadataRequest { string file_id = 1; }
 message FileMetadataResponse {
   bool is_processed = 1;
   string storage_location = 2;
+}
+
+// Files by user
+message FilesByUserRequest { string email = 1; }
+
+message FilesByUserResponse {
+  repeated File files = 1;
+}
+
+message File {
+  string file_id = 1;
+  string file_name = 2;
+  string file_size = 3;
+  string storage_location = 4;
+  string upload_date = 5;
+  bool is_processed = 6;
+  string expired_at = 7;
 }

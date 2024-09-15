@@ -53,8 +53,9 @@ func (s *StorageService) UploadFile(ctx context.Context, req *proto_go.UploadFil
 	go func() {
 		// Publish message to Kafka
 		s.p.ProduceMsg(context.Background(), "file-process-in", &models.FileProcess{
-			ID:   uuid,
-			Path: fmt.Sprintf("/uploads/%s", uuid+"_"+req.GetFileName()),
+			ID:    uuid,
+			Path:  fmt.Sprintf("/uploads/%s", uuid+"_"+req.GetFileName()),
+			Email: req.Email,
 		})
 	}()
 

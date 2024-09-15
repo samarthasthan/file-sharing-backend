@@ -110,7 +110,20 @@ func main() {
 			if err != nil {
 				log.Fatalf("Failed to update file status: %v", err)
 			}
-			log.Infof("Received message: %s", string(msg.Value))
+
+			// Create a new Mail struct
+			mail := &models.Mail{
+				To:      fileProcess.Email,
+				Subject: fmt.Sprintf("File Processed: %s", fileProcess.ID),
+				Body:    fmt.Sprintf("File %s has been processed successfully, public url is http://3.7.73.40:1248/share/%s", fileProcess.ID, fileProcess.ID),
+			}
+
+			// Produce a message to the mail topic
+			err = p.ProduceMsg(context.Background(), "mail", mail)
+			if err != nil {
+				log.Fatalf("Failed to produce message: %v", err)
+			}
+
 		}
 	}
 }
