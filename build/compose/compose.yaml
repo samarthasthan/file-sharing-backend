@@ -65,13 +65,6 @@ services:
     ports:
       - "${REDIS_PORT}:6379"
 
-  redis2:
-    image: redis:latest
-    container_name: redis2
-    networks:
-      - storage_project
-    ports:
-      - "14001:6379"
 
   # S3 Compatible Storage
   minio:

@@ -31,6 +31,10 @@ SELECT FileID, UserID, FileName, FileSize, FileType, StorageLocation, UploadDate
 FROM Files
 WHERE ExpiresAt < CURRENT_TIMESTAMP AND IsProcessed = FALSE;
 
+-- name: DeleteExpiredFiles :exec
+DELETE FROM Files
+WHERE ExpiresAt < CURRENT_TIMESTAMP;
+
 -- name: SearchFiles :many
 SELECT FileID, UserID, FileName, FileSize, FileType, StorageLocation, UploadDate, IsProcessed, ExpiresAt, UpdatedAt
 FROM Files

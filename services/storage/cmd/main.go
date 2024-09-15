@@ -101,41 +101,51 @@ func main() {
 		grpcServer.Run(STORAGE_GRPC_PORT)
 	}()
 
-	for {
-		msg, err := c.ReadMessage(1 * time.Second)
-		if err != nil {
-			continue
-		} else {
-			// Message to models.FileProcess
-			fileProcess := &models.FileProcess{}
-			if err := json.Unmarshal(msg.Value, fileProcess); err != nil {
-				log.Fatalf("Failed to unmarshal message: %v", err)
-			}
-			// Delete file from local storage
-			err = os.Remove(fmt.Sprintf("../../../.data%s", fileProcess.Path))
+	go func() {
+		for {
+			msg, err := c.ReadMessage(1 * time.Second)
 			if err != nil {
-				log.Fatalf("Failed to delete file: %v", err)
-			}
+				continue
+			} else {
+				// Message to models.FileProcess
+				fileProcess := &models.FileProcess{}
+				if err := json.Unmarshal(msg.Value, fileProcess); err != nil {
+					log.Fatalf("Failed to unmarshal message: %v", err)
+				}
+				// Delete file from local storage
+				err = os.Remove(fmt.Sprintf("../../../.data%s", fileProcess.Path))
+				if err != nil {
+					log.Fatalf("Failed to delete file: %v", err)
+				}
 
-			// Update file status in database
-			err = repo.MarkFileAsProcessed(context.Background(), fileProcess.ID)
-			if err != nil {
-				log.Fatalf("Failed to update file status: %v", err)
-			}
+				// Update file status in database
+				err = repo.MarkFileAsProcessed(context.Background(), fileProcess.ID)
+				if err != nil {
+					log.Fatalf("Failed to update file status: %v", err)
+				}
 
-			// Create a new Mail struct
-			mail := &models.Mail{
-				To:      fileProcess.Email,
-				Subject: fmt.Sprintf("File Processed: %s", fileProcess.ID),
-				Body:    fmt.Sprintf("File %s has been processed successfully, public url is http://3.7.73.40:1248/share/%s", fileProcess.ID, fileProcess.ID),
-			}
+				// Create a new Mail struct
+				mail := &models.Mail{
+					To:      fileProcess.Email,
+					Subject: fmt.Sprintf("File Processed: %s", fileProcess.ID),
+					Body:    fmt.Sprintf("File %s has been processed successfully, public url is http://3.7.73.40:1248/share/%s", fileProcess.ID, fileProcess.ID),
+				}
 
-			// Produce a message to the mail topic
-			err = p.ProduceMsg(context.Background(), "mail", mail)
-			if err != nil {
-				log.Fatalf("Failed to produce message: %v", err)
-			}
+				// Produce a message to the mail topic
+				err = p.ProduceMsg(context.Background(), "mail", mail)
+				if err != nil {
+					log.Fatalf("Failed to produce message: %v", err)
+				}
 
+			}
 		}
-	}
+	}()
+
+	go func() {
+		// Delete files older than 5 minutes
+		for {
+			// err := repo.DeleteFile(context.Background())
+			time.Sleep(5 * time.Minute)
+		}
+	}()
 }
