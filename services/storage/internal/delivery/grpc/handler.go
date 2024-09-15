@@ -11,12 +11,21 @@ import (
 	"os"
 
 	"github.com/google/uuid"
+	"github.com/samarthasthan/21BRS1248_Backend/common/env"
 	"github.com/samarthasthan/21BRS1248_Backend/common/models"
 	"github.com/samarthasthan/21BRS1248_Backend/common/proto_go"
 	"github.com/samarthasthan/21BRS1248_Backend/services/storage/internal/database/sqlc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+var (
+	HOST string
+)
+
+func init() {
+	HOST = env.GetEnv("HOST", "localhost:1248")
+}
 
 // File storage path (local disk)
 const fileStoragePath = "../../../.data/uploads/"
@@ -61,8 +70,9 @@ func (s *StorageService) UploadFile(ctx context.Context, req *proto_go.UploadFil
 	}()
 
 	return &proto_go.UploadFileResponse{
-		FileId:  uuid,
-		Message: "File uploaded successfully",
+		FileId:    uuid,
+		Message:   "File uploaded successfully",
+		PublicUrl: fmt.Sprintf("%s/share/%s", HOST, uuid),
 	}, nil
 }
 
@@ -116,7 +126,7 @@ func (s *StorageService) GetFilesByUser(ctx context.Context, req *proto_go.Files
 			UploadDate:      file.Uploaddate.String(),
 			IsProcessed:     file.Isprocessed.Bool,
 			ExpiredAt:       file.Expiresat.Time.String(),
-			PublicUrl:       fmt.Sprintf("http://3.7.73.40:1248/share/%s", file.Fileid),
+			PublicUrl:       fmt.Sprintf("%s/share/%s", HOST, file.Fileid),
 		})
 	}
 

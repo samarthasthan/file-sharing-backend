@@ -8,7 +8,6 @@ import (
 )
 
 var (
-	MAIL_GRPC_PORT string
 	SMTP_SERVER    string
 	SMTP_PORT      string
 	SMTP_LOGIN     string
@@ -18,7 +17,6 @@ var (
 )
 
 func init() {
-	MAIL_GRPC_PORT = env.GetEnv("MAIL_GRPC_PORT", "12000")
 	SMTP_SERVER = env.GetEnv("SMTP_SERVER", "smtp-relay.sendinblue.com")
 	SMTP_PORT = env.GetEnv("SMTP_PORT", "587")
 	SMTP_LOGIN = env.GetEnv("SMTP_LOGIN", "use your own sender")

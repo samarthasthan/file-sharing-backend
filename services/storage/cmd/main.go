@@ -32,6 +32,7 @@ var (
 	KAFKA_HOST                string
 	REDIS_HOST                string
 	REDIS_PORT                string
+	HOST                      string
 )
 
 func init() {
@@ -46,6 +47,7 @@ func init() {
 	KAFKA_HOST = env.GetEnv("KAFKA_HOST", "localhost")
 	REDIS_HOST = env.GetEnv("REDIS_HOST", "localhost")
 	REDIS_PORT = env.GetEnv("REDIS_PORT", "6379")
+	HOST = env.GetEnv("HOST", "localhost:1248")
 }
 
 func main() {

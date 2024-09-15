@@ -16,7 +16,7 @@ var (
 )
 
 func init() {
-	MAX_FILE_SIZE = env.GetEnvInt("MAX_FILE_SIZE", 500*1024*1024)
+	MAX_FILE_SIZE = env.GetEnvInt("MAX_FILE_SIZE", 5000*1024*1024)
 }
 
 type GrpcServer struct {

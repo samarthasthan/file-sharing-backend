@@ -26,6 +26,7 @@ message UploadFileResponse {
   bool success = 1;
   string message = 2;
   string file_id = 3; // ID of the uploaded file
+  string public_url = 4;
 }
 
 // Request to get file metadata

@@ -19,10 +19,39 @@ services:
       start_period: 10s
 
   # Services
+
+  # api
+  api:
+    build:
+      context: ../../
+      dockerfile: ./build/dockerfile/api/Dockerfile
+    container_name: api
+    networks:
+      - storage_project
+    environment:
+      - API_PORT=${API_PORT}
+      - USER_GRPC_PORT=${USER_GRPC_PORT}
+      - USER_GRPC_HOST=${USER_GRPC_HOST}
+      - STORAGE_GRPC_PORT=${STORAGE_GRPC_PORT}
+      - STORAGE_GRPC_HOST=${STORAGE_GRPC_HOST}
+      - GRAFANA_LOKI_HOST=${GRAFANA_LOKI_HOST}
+      - GRAFANA_LOKI_PORT=${GRAFANA_LOKI_PORT}
+      - PROMETHEUS_PORT=${PROMETHEUS_PORT}
+      - ZIPKIN_HOST=${ZIPKIN_HOST}
+      - ZIPKIN_PORT=${ZIPKIN_PORT}
+      - MAX_FILE_SIZE=${MAX_FILE_SIZE}
+    ports:
+      - "${API_PORT}:${API_PORT}"
+    command: ["./app"]
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  # Notification Service
   notification:
     build:
       context: ../../
-      dockerfile: ./build/dockerfile/mail/Dockerfile
+      dockerfile: ./build/dockerfile/notification/Dockerfile
     container_name: notification
     networks:
       - storage_project
@@ -33,14 +62,116 @@ services:
       - SMTP_PASSWORD=${SMTP_PASSWORD}
       - KAFKA_PORT=${KAFKA_PORT}
       - KAFKA_HOST=${KAFKA_HOST}
-      - GRAFANA_LOKI_PORT=${GRAFANA_LOKI_PORT}
       - GRAFANA_LOKI_HOST=${GRAFANA_LOKI_HOST}
+      - GRAFANA_LOKI_PORT=${GRAFANA_LOKI_PORT}
       - ZIPKIN_HOST=${ZIPKIN_HOST}
+      - MAX_FILE_SIZE=${MAX_FILE_SIZE}
     command: ["./app"]
     depends_on:
       kafka:
         condition: service_healthy
 
+  #User Service
+  user:
+    build:
+      context: ../../
+      dockerfile: ./build/dockerfile/user/Dockerfile
+    container_name: user
+    networks:
+      - storage_project
+    environment:
+      - USER_GRPC_PORT=${USER_GRPC_PORT}
+      - USER_GRPC_HOST=${USER_GRPC_HOST}
+      - STORAGE_GRPC_PORT=${STORAGE_GRPC_PORT}
+      - STORAGE_GRPC_HOST=${STORAGE_GRPC_HOST}
+      - GRAFANA_LOKI_HOST=${GRAFANA_LOKI_HOST}
+      - GRAFANA_LOKI_PORT=${GRAFANA_LOKI_PORT}
+      - PROMETHEUS_PORT=${PROMETHEUS_PORT}
+      - ZIPKIN_HOST=${ZIPKIN_HOST}
+      - ZIPKIN_PORT=${ZIPKIN_PORT}   
+      - MAX_FILE_SIZE=${MAX_FILE_SIZE}       
+    command: ["./app"]
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  # storage
+  storage:
+    build:
+      context: ../../
+      dockerfile: ./build/dockerfile/storage/Dockerfile
+    container_name: storage
+    networks:
+      - storage_project
+    environment:
+      - STORAGE_GRPC_PORT=${STORAGE_GRPC_PORT}
+      - STORAGE_DB_PORT=${STORAGE_DB_PORT}
+      - STORAGE_POSTGRES_PASSWORD=${STORAGE_POSTGRES_PASSWORD}
+      - STORAGE_POSTGRES_DB=${STORAGE_POSTGRES_DB}
+      - STORAGE_POSTGRES_HOST=${STORAGE_POSTGRES_HOST}
+      - KAFKA_PORT=${KAFKA_PORT}
+      - KAFKA_HOST=${KAFKA_HOST}
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - HOST=${HOST}
+      - GRAFANA_LOKI_HOST=${GRAFANA_LOKI_HOST}
+      - GRAFANA_LOKI_PORT=${GRAFANA_LOKI_PORT}
+      - ZIPKIN_HOST=${ZIPKIN_HOST}
+      - MAX_FILE_SIZE=${MAX_FILE_SIZE}
+    command: ["./app"]
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  # file-process
+  file-process:
+    build:
+      context: ../../
+      dockerfile: ./build/dockerfile/file-process/Dockerfile
+    container_name: file-process
+    networks:
+      - storage_project
+    environment:
+      - MINIO_HOST=${MINIO_HOST}
+      - MINIO_PORT=${MINIO_PORT}
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+      - MINIO_DEFAULT_BUCKETS=${MINIO_DEFAULT_BUCKETS}
+      - KAFKA_HOST=${KAFKA_HOST}
+      - KAFKA_PORT=${KAFKA_PORT}
+      - GRAFANA_LOKI_HOST=${GRAFANA_LOKI_HOST}
+      - GRAFANA_LOKI_PORT=${GRAFANA_LOKI_PORT}
+      - ZIPKIN_HOST=${ZIPKIN_HOST}
+      - MAX_FILE_SIZE=${MAX_FILE_SIZE}
+    command: ["./app"]
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  # delete service
+  delete:
+    build:
+      context: ../../
+      dockerfile: ./build/dockerfile/delete/Dockerfile
+    container_name: delete
+    networks:
+      - storage_project
+    environment:
+      - MINIO_PORT=${MINIO_PORT}
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+      - MINIO_HOST=${MINIO_HOST}
+      - MINIO_DEFAULT_BUCKETS=${MINIO_DEFAULT_BUCKETS}
+      - KAFKA_PORT=${KAFKA_PORT}
+      - KAFKA_HOST=${KAFKA_HOST}
+      - GRAFANA_LOKI_HOST=${GRAFANA_LOKI_HOST}
+      - GRAFANA_LOKI_PORT=${GRAFANA_LOKI_PORT}
+      - ZIPKIN_HOST=${ZIPKIN_HOST}
+      - MAX_FILE_SIZE=${MAX_FILE_SIZE}
+    command: ["./app"]
+    depends_on:
+      kafka:
+        condition: service_healthy
 
   # Database
   postgres:
