@@ -200,7 +200,7 @@ services:
   # S3 Compatible Storage
   minio:
     image: bitnami/minio:latest
-    container_name: trademarkia-minio
+    container_name: minio
     networks:
       - storage_project
     ports:
@@ -208,7 +208,6 @@ services:
       - "${MINIO_WEB_PORT}:9001"
     environment:
       - MINIO_FORCE_NEW_KEYS=yes
-      - MINIO_HOST=${MINIO_HOST}
       - MINIO_ROOT_USER=${MINIO_ROOT_USER}
       - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
       - MINIO_DEFAULT_BUCKETS=${MINIO_DEFAULT_BUCKETS}
@@ -221,7 +220,7 @@ services:
   # Metrics, Logging and Tracing
   loki:
     image: grafana/loki
-    container_name: trademarkia-loki
+    container_name: loki
     networks:
       - storage_project
     ports:
@@ -229,7 +228,7 @@ services:
 
   grafana:
     image: grafana/grafana-oss
-    container_name: trademarkia-grafana
+    container_name: grafana
     networks:
       - storage_project
     ports:
@@ -247,7 +246,7 @@ services:
 
   prometheus:
     image: prom/prometheus
-    container_name: trademarkia-prometheus
+    container_name: prometheus
     networks:
       - storage_project
     command:
@@ -260,7 +259,7 @@ services:
 
   zipkin:
     image: openzipkin/zipkin
-    container_name: trademarkia-zipkin
+    container_name: zipkin
     networks:
       - storage_project
     ports:

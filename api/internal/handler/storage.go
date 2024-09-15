@@ -8,8 +8,17 @@ import (
 	"mime/multipart"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/samarthasthan/21BRS1248_Backend/common/env"
 	"github.com/samarthasthan/21BRS1248_Backend/common/proto_go"
 )
+
+var (
+	HOST string
+)
+
+func init() {
+	HOST = env.GetEnv("HOST", "localhost:1248")
+}
 
 func (f *FiberHandler) handleFileUpload(c *fiber.Ctx) error {
 	// Retrieve the email from Fiber context
@@ -40,8 +49,9 @@ func (f *FiberHandler) handleFileUpload(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{
-		"message": grpcResponse.Message,
-		"file_id": grpcResponse.FileId,
+		"message":    grpcResponse.Message,
+		"file_id":    grpcResponse.FileId,
+		"public_url": fmt.Sprintf("http://%s/share/%s", HOST, grpcResponse.FileId),
 	})
 }
 
@@ -63,7 +73,7 @@ func (f *FiberHandler) handleGetFile(c *fiber.Ctx) error {
 	}
 
 	if grpcResponse.IsProcessed {
-		err = c.Redirect(fmt.Sprintf("http://3.7.73.40:13000%s", grpcResponse.StorageLocation))
+		err = c.Redirect(fmt.Sprintf("%s%s", "http://localhost:13000", grpcResponse.StorageLocation))
 		if err != nil {
 			return fiber.NewError(fiber.StatusInternalServerError, fmt.Sprintf("Failed to serve file: %v", err))
 		}

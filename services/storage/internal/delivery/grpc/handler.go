@@ -25,6 +25,7 @@ var (
 
 func init() {
 	HOST = env.GetEnv("HOST", "localhost:1248")
+
 }
 
 // File storage path (local disk)
