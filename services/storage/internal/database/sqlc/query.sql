@@ -8,9 +8,9 @@ VALUES (
 
 
 -- name: GetFilesByUser :many
-SELECT FileID, UserID, FileName, FileSize, FileType, StorageLocation, UploadDate, IsProcessed, ExpiresAt, UpdatedAt
+SELECT FileID, FileName, FileSize, FileType, StorageLocation, UploadDate, IsProcessed, ExpiresAt
 FROM Files
-WHERE UserID = $1;
+WHERE UserID = (SELECT UserID FROM Users WHERE Email = $1)  ORDER BY UploadDate DESC;
 
 -- name: GetFileByID :one
 SELECT FileID, UserID, FileName, FileSize, FileType, StorageLocation, UploadDate, IsProcessed, ExpiresAt, UpdatedAt

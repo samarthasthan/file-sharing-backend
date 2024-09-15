@@ -113,7 +113,7 @@ func (f *FiberHandler) handleFileRoutes() {
 	f.app.Use(authMiddleware(f.userClient))
 	// Protect routes with JWT middleware
 	f.app.Post("/upload", jwtMiddleware(), f.handleFileUpload)
-
+	f.app.Get("/files", jwtMiddleware(), f.handleGetFiles)
 }
 
 // zipkinMiddleware adds Zipkin tracing to the Fiber middleware

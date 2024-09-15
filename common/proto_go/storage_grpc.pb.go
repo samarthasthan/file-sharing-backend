@@ -26,6 +26,8 @@ type FileServiceClient interface {
 	UploadFile(ctx context.Context, in *UploadFileRequest, opts ...grpc.CallOption) (*UploadFileResponse, error)
 	// Get file metadata method
 	GetFileMetadata(ctx context.Context, in *FileMetadataRequest, opts ...grpc.CallOption) (*FileMetadataResponse, error)
+	// Get files by user
+	GetFilesByUser(ctx context.Context, in *FilesByUserRequest, opts ...grpc.CallOption) (*FilesByUserResponse, error)
 }
 
 type fileServiceClient struct {
@@ -54,6 +56,15 @@ func (c *fileServiceClient) GetFileMetadata(ctx context.Context, in *FileMetadat
 	return out, nil
 }
 
+func (c *fileServiceClient) GetFilesByUser(ctx context.Context, in *FilesByUserRequest, opts ...grpc.CallOption) (*FilesByUserResponse, error) {
+	out := new(FilesByUserResponse)
+	err := c.cc.Invoke(ctx, "/FileService/GetFilesByUser", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // FileServiceServer is the server API for FileService service.
 // All implementations must embed UnimplementedFileServiceServer
 // for forward compatibility
@@ -62,6 +73,8 @@ type FileServiceServer interface {
 	UploadFile(context.Context, *UploadFileRequest) (*UploadFileResponse, error)
 	// Get file metadata method
 	GetFileMetadata(context.Context, *FileMetadataRequest) (*FileMetadataResponse, error)
+	// Get files by user
+	GetFilesByUser(context.Context, *FilesByUserRequest) (*FilesByUserResponse, error)
 	mustEmbedUnimplementedFileServiceServer()
 }
 
@@ -74,6 +87,9 @@ func (UnimplementedFileServiceServer) UploadFile(context.Context, *UploadFileReq
 }
 func (UnimplementedFileServiceServer) GetFileMetadata(context.Context, *FileMetadataRequest) (*FileMetadataResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetFileMetadata not implemented")
+}
+func (UnimplementedFileServiceServer) GetFilesByUser(context.Context, *FilesByUserRequest) (*FilesByUserResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetFilesByUser not implemented")
 }
 func (UnimplementedFileServiceServer) mustEmbedUnimplementedFileServiceServer() {}
 
@@ -124,6 +140,24 @@ func _FileService_GetFileMetadata_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _FileService_GetFilesByUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FilesByUserRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FileServiceServer).GetFilesByUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/FileService/GetFilesByUser",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FileServiceServer).GetFilesByUser(ctx, req.(*FilesByUserRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // FileService_ServiceDesc is the grpc.ServiceDesc for FileService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -138,6 +172,10 @@ var FileService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetFileMetadata",
 			Handler:    _FileService_GetFileMetadata_Handler,
+		},
+		{
+			MethodName: "GetFilesByUser",
+			Handler:    _FileService_GetFilesByUser_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

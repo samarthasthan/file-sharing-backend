@@ -86,23 +86,33 @@ func (q *Queries) GetFileByID(ctx context.Context, fileid string) (File, error) 
 }
 
 const getFilesByUser = `-- name: GetFilesByUser :many
-SELECT FileID, UserID, FileName, FileSize, FileType, StorageLocation, UploadDate, IsProcessed, ExpiresAt, UpdatedAt
+SELECT FileID, FileName, FileSize, FileType, StorageLocation, UploadDate, IsProcessed, ExpiresAt
 FROM Files
-WHERE UserID = $1
+WHERE UserID = (SELECT UserID FROM Users WHERE Email = $1)  ORDER BY UploadDate DESC
 `
 
-func (q *Queries) GetFilesByUser(ctx context.Context, userid string) ([]File, error) {
-	rows, err := q.db.QueryContext(ctx, getFilesByUser, userid)
+type GetFilesByUserRow struct {
+	Fileid          string
+	Filename        string
+	Filesize        int64
+	Filetype        string
+	Storagelocation string
+	Uploaddate      time.Time
+	Isprocessed     sql.NullBool
+	Expiresat       sql.NullTime
+}
+
+func (q *Queries) GetFilesByUser(ctx context.Context, email string) ([]GetFilesByUserRow, error) {
+	rows, err := q.db.QueryContext(ctx, getFilesByUser, email)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []File
+	var items []GetFilesByUserRow
 	for rows.Next() {
-		var i File
+		var i GetFilesByUserRow
 		if err := rows.Scan(
 			&i.Fileid,
-			&i.Userid,
 			&i.Filename,
 			&i.Filesize,
 			&i.Filetype,
@@ -110,7 +120,6 @@ func (q *Queries) GetFilesByUser(ctx context.Context, userid string) ([]File, er
 			&i.Uploaddate,
 			&i.Isprocessed,
 			&i.Expiresat,
-			&i.Updatedat,
 		); err != nil {
 			return nil, err
 		}

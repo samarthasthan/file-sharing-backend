@@ -9,6 +9,9 @@ service FileService {
 
   // Get file metadata method
   rpc GetFileMetadata(FileMetadataRequest) returns (FileMetadataResponse);
+
+  // Get files by user
+  rpc GetFilesByUser(FilesByUserRequest) returns (FilesByUserResponse);
 }
 
 // Request to upload file
@@ -45,8 +48,10 @@ message File {
   string file_id = 1;
   string file_name = 2;
   string file_size = 3;
-  string storage_location = 4;
-  string upload_date = 5;
-  bool is_processed = 6;
-  string expired_at = 7;
+  string file_type = 4;
+  string storage_location = 5;
+  string upload_date = 6;
+  bool is_processed = 7;
+  string expired_at = 8;
+  string public_url = 9;
 }

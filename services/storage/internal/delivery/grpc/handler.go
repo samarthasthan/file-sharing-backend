@@ -77,3 +77,31 @@ func (s *StorageService) GetFileMetadata(ctx context.Context, req *proto_go.File
 		StorageLocation: file.Storagelocation,
 	}, nil
 }
+
+// GetFilesByUser
+func (s *StorageService) GetFilesByUser(ctx context.Context, req *proto_go.FilesByUserRequest) (*proto_go.FilesByUserResponse, error) {
+	files, err := s.repo.FilesByUserRequest(ctx, req.GetEmail())
+	if err != nil {
+		return nil, status.Errorf(codes.NotFound, "files not found: %v", err)
+	}
+
+	var filesResp []*proto_go.File
+
+	for _, file := range files {
+		filesResp = append(filesResp, &proto_go.File{
+			FileId:          file.Fileid,
+			FileName:        file.Filename,
+			FileSize:        fmt.Sprintf("%d bytes", file.Filesize),
+			FileType:        file.Filetype,
+			StorageLocation: file.Storagelocation,
+			UploadDate:      file.Uploaddate.String(),
+			IsProcessed:     file.Isprocessed.Bool,
+			ExpiredAt:       file.Expiresat.Time.String(),
+			PublicUrl:       fmt.Sprintf("http://3.7.73.40:1248/share/%s", file.Fileid),
+		})
+	}
+
+	return &proto_go.FilesByUserResponse{
+		Files: filesResp,
+	}, nil
+}

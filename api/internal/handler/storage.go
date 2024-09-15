@@ -87,6 +87,25 @@ func (f *FiberHandler) handleGetFile(c *fiber.Ctx) error {
 	return nil
 }
 
+// handleGetFiles handles the request to get all files uploaded by the user
+func (f *FiberHandler) handleGetFiles(c *fiber.Ctx) error {
+	// Retrieve the email from Fiber context
+	email := c.Locals("email").(string)
+	if email == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "Email is required")
+	}
+
+	// Call the gRPC service to get all files uploaded by the user
+	grpcResponse, err := f.fileClient.GetFilesByUser(c.Context(), &proto_go.FilesByUserRequest{
+		Email: email,
+	})
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, fmt.Sprintf("Failed to retrieve files: %v", err))
+	}
+
+	return c.JSON(grpcResponse)
+}
+
 // Helper function to read file from multipart form
 func readMultipartFile(file *multipart.FileHeader) ([]byte, error) {
 	f, err := file.Open()

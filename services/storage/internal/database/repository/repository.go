@@ -31,3 +31,12 @@ func (r *Repository) GetFile(ctx context.Context, in string) (*sqlc.File, error)
 	}
 	return &file, nil
 }
+
+// FilesByUserRequest
+func (r *Repository) FilesByUserRequest(ctx context.Context, in string) ([]sqlc.GetFilesByUserRow, error) {
+	files, err := r.Queries.GetFilesByUser(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	return files, nil
+}
