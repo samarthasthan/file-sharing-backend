@@ -28,6 +28,17 @@ The system includes an API Gateway for routing requests, **gRPC** for fast inter
 - **S3**: File storage
 - **Grafana, Prometheus, Loki, Zipkin**: Monitoring and tracing
 - **Docker**: Containerization
+  
+## Notes on Current Implementation
+
+Due to time constraints, some aspects of the project are not as polished as they could be:
+
+- **Comments:** The code may lack comprehensive comments and documentation. This is an area for improvement to enhance readability and maintainability.
+- **Testing:** Only a few tests are written in the `common` folder. More extensive testing is needed to ensure robustness and reliability.
+- **Search Indexing:** Indexing for better search functionality has not been implemented. Adding this feature could significantly improve search performance and accuracy.
+- **Hard-Coded Values:** Some values are hard-coded in the implementation. These should ideally be replaced with configurable options or environment variables for greater flexibility and maintainability.
+
+These are areas that can be improved in future iterations to enhance the overall quality and functionality of the system.
 
 ## Live URL
 
