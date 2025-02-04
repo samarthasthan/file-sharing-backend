@@ -1,11 +1,5 @@
 # File Sharing & Management System
 
-```
-Name - Samarth Asthan
-Reg.No - 21BRS1248
-Mail - samarthasthan27@gmail.com
-```
-
 **Note**: This project uses **MinIO S3**, a Golang-based open-source S3 object storage, for file storage. If you want to use any other S3-compatible storage, simply change the S3 credentials in the environment configuration.
 
 ## Project Overview
